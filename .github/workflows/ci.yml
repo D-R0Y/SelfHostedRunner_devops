@@ -9,31 +9,37 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    # Method 1: Install Docker Compose plugin
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-compose-plugin
+        docker compose version
+    
+    # Alternative Method 2: Install via pip
+    # - name: Install Docker Compose
+    #   run: |
+    #     pip install docker-compose
+    #     docker-compose --version
+    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
     
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest
+        pip install pytest requests
         pip install -r app/requirements.txt
     
     - name: Build and Start Docker Compose
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 30  # Wait for services to start
     
     - name: Run Health Check
       run: |
-        # Wait for service to be fully ready
         max_attempts=10
         attempt=1
         while [ $attempt -le $max_attempts ]; do
@@ -47,16 +53,15 @@ jobs:
           attempt=$((attempt + 1))
         done
         echo "Health check failed after $max_attempts attempts"
-        docker-compose logs  # Print logs for debugging
+        docker compose logs  # Print logs for debugging
         exit 1
     
     - name: Run Tests
       run: |
-        pip install requests
         pytest tests/
     
     - name: Show Logs on Failure
       if: failure()
       run: |
-        docker-compose ps
-        docker-compose logs
+        docker compose ps
+        docker compose logs
